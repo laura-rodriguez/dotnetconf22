@@ -1,8 +1,10 @@
 using GroceryAPI.DAL;
 using GroceryAPI.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using System;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,7 +15,21 @@ builder.Services.AddDbContext<GroceryDbContext>(o => o.UseInMemoryDatabase("MyGr
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(GetDefaultOpenApiSecurityRequirement());
+});
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication("Bearer").AddJwtBearer();
 
 var app = builder.Build();
 
@@ -44,7 +60,7 @@ app.MapGet("/api/groceries/{id:int}", Results<Ok<GroceryItem>, NotFound> ([FromR
 .WithOpenApi();
 
 // POST a new grocery item
-app.MapPost("/api/groceries", (IGroceryRepository groceryRepository, GroceryItem groceryItem) =>
+app.MapPost("/api/groceries", [Authorize] (IGroceryRepository groceryRepository, GroceryItem groceryItem) =>
 {
     groceryRepository.AddItem(groceryItem);
     groceryRepository.SaveChanges();
@@ -52,10 +68,19 @@ app.MapPost("/api/groceries", (IGroceryRepository groceryRepository, GroceryItem
     return TypedResults.Created($"/api/groceries/{groceryItem.Id}", groceryItem);
 })
 .WithName("AddGroceryItem")
-.WithOpenApi();
+.WithOpenApi(operation =>
+{
+    operation.Security = new List<OpenApiSecurityRequirement>
+    {
+       GetDefaultOpenApiSecurityRequirement()
+    };
+
+    return operation;
+});
+
 
 // PUT an existing grocery item
-app.MapPut("/api/groceries/{id:int}", Results<NoContent, NotFound> ([FromRoute] int id, GroceryItem groceryItem, IGroceryRepository groceryRepository) =>
+app.MapPut("/api/groceries/{id:int}", [Authorize] Results<NoContent, NotFound> ([FromRoute] int id, GroceryItem groceryItem, IGroceryRepository groceryRepository) =>
 {
     var existingItem = groceryRepository.GetItem(id);
     
@@ -73,11 +98,19 @@ app.MapPut("/api/groceries/{id:int}", Results<NoContent, NotFound> ([FromRoute] 
     return TypedResults.NoContent();
 })
 .WithName("UpdateGroceryItem")
-.WithOpenApi();
+.WithOpenApi(operation =>
+{
+    operation.Security = new List<OpenApiSecurityRequirement>
+    {
+       GetDefaultOpenApiSecurityRequirement()
+    };
+
+    return operation;
+});
 
 
 // DELETE a grocery item
-app.MapDelete("/api/groceries/{id:int}", Results<NoContent, NotFound> ([FromRoute] int id, IGroceryRepository groceryRepository) =>
+app.MapDelete("/api/groceries/{id:int}", [Authorize] Results<NoContent, NotFound> ([FromRoute] int id, IGroceryRepository groceryRepository) =>
 {
     var existingItem = groceryRepository.GetItem(id);
 
@@ -92,6 +125,32 @@ app.MapDelete("/api/groceries/{id:int}", Results<NoContent, NotFound> ([FromRout
     return TypedResults.NoContent();
 })
 .WithName("DeleteGroceryItem")
-.WithOpenApi();
+.WithOpenApi(operation =>
+{
+    operation.Security = new List<OpenApiSecurityRequirement>
+    {
+       GetDefaultOpenApiSecurityRequirement()
+    };
+
+    return operation;
+});
 
 app.Run();
+
+static OpenApiSecurityRequirement GetDefaultOpenApiSecurityRequirement() => new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        },
+                        Scheme = "oauth2",
+                        Name = "Bearer",
+                        In = ParameterLocation.Header
+                    },
+                    new List<string>()
+                }
+            };

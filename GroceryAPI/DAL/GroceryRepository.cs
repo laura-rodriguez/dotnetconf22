@@ -22,22 +22,26 @@ namespace GroceryAPI.DAL
                 new GroceryItem
                 {
                     Name = "Flour",
-                    Description = "1 package of 1kg",
+                    Description = "Package of 1kg",
+                    Quantity = 1,
                 },
                 new GroceryItem
                 {
                     Name = "Pepperoni",
-                    Description = "1 package of 500g",
+                    Description = "package of 500g",
+                    Quantity = 2,    
                 },
                 new GroceryItem
                 {
                     Name = "Tomato Sauce",
-                    Description = "1 bottle",
+                    Description = "Bottle or can",
+                    Quantity = 2,
                 },
                 new GroceryItem
                 {
                     Name = "Mozzarella",
                     Description = "500g",
+                    Quantity = 2,
                 },
             };
 
