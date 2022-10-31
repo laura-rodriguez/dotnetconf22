@@ -17,6 +17,12 @@ builder.Services.AddDbContext<GroceryDbContext>(o => o.UseInMemoryDatabase("MyGr
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SwaggerDoc("v1", new()
+    {
+        Title = builder.Environment.ApplicationName,
+        Version = "v1",
+    });
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme.",
