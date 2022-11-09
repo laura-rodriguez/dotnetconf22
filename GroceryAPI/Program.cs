@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,24 +16,9 @@ builder.Services.AddDbContext<GroceryDbContext>(o => o.UseInMemoryDatabase("MyGr
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new()
-    {
-        Title = builder.Environment.ApplicationName,
-        Version = "v1",
-    });
+builder.Services.AddSwaggerGen();
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme.",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-    c.AddSecurityRequirement(GetDefaultOpenApiSecurityRequirement());
-});
+builder.Services.Configure<SwaggerGeneratorOptions>(o => { o.InferSecuritySchemes = true; });
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication("Bearer").AddJwtBearer();
@@ -135,7 +121,7 @@ app.MapDelete("/api/groceries/{id:int}", [Authorize] Results<NoContent, NotFound
 {
     operation.Security = new List<OpenApiSecurityRequirement>
     {
-       GetDefaultOpenApiSecurityRequirement()
+        GetDefaultOpenApiSecurityRequirement()
     };
 
     return operation;
@@ -143,20 +129,20 @@ app.MapDelete("/api/groceries/{id:int}", [Authorize] Results<NoContent, NotFound
 
 app.Run();
 
-static OpenApiSecurityRequirement GetDefaultOpenApiSecurityRequirement() => new OpenApiSecurityRequirement
+static OpenApiSecurityRequirement GetDefaultOpenApiSecurityRequirement() 
+    => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
             {
+                Reference = new OpenApiReference
                 {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        },
-                        Scheme = "oauth2",
-                        Name = "Bearer",
-                        In = ParameterLocation.Header
-                    },
-                    new List<string>()
-                }
-            };
+                    Type = ReferenceType.SecurityScheme,
+                    Id = JwtBearerDefaults.AuthenticationScheme,
+                },
+                Scheme = SecuritySchemeType.Http.ToString(),
+                Name = JwtBearerDefaults.AuthenticationScheme,
+            },
+            new List<string>()
+        }
+    };
